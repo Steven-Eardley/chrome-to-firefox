@@ -1,25 +1,31 @@
 #! /usr/bin/env python
-"""
-Script to convert a Chrome / Opera WebExtension to a Firefox-compatible WebExtension
-Will create a compressed zip archive named from manifest keys <name>_<version>.xpi
-Steven Eardley | Cottage Labs LLP
-steve@cottagelabs.com
-"""
-
 import os
 import json
 import zipfile
 import argparse
+import re
 
-parser = argparse.ArgumentParser()
+abt = \
+    """
+    Script to convert a Chrome / Opera WebExtension to a Firefox-compatible WebExtension archive.
+    Creates a compressed zip archive named from manifest keys <version_name>.xpi  or <name>_firefox_<version>.xpi
+    Steven Eardley | Cottage Labs LLP | steve@cottagelabs.com
+    """
+
+parser = argparse.ArgumentParser(description=abt)
+parser.add_argument("-d",
+                    "--dir",
+                    default="..",
+                    help="directory to pack (with manifest.json at its root)."
+                         "Defaults to .. so this script can used in a submodule")
 parser.add_argument("-i",
                     "--id",
                     default="firefox_extension@cottagelabs.com",
-                    help="The id to be added to the manifest")
+                    help="extension ID to be added to the manifest. Default is firefox_extension@cottagelabs.com")
 parser.add_argument("-v",
                     "--min_version",
                     default="45.0.0",
-                    help="The version to put as strict_min_version")
+                    help="version to put as strict_min_version for Firefox. Defaults to 45.0.0")
 args = parser.parse_args()
 
 ffx_manifest_extras = {
@@ -32,44 +38,52 @@ ffx_manifest_extras = {
 }
 
 chrome_manifest = None
-
-with open('manifest.json') as f:
-    try:
-        chrome_manifest = json.load(f)
-        # change version string to firefox
+try:
+    with open(args.dir + '/manifest.json') as f:
         try:
-            chrome_manifest["version_name"] = chrome_manifest["version_name"].replace('chrome', 'firefox')
-        except KeyError:
-            # no version_name, pass
-            pass
+            chrome_manifest = json.load(f)
+            # change version string to firefox
+            try:
+                chrome_manifest["version_name"] = chrome_manifest["version_name"].replace('chrome', 'firefox')
+            except KeyError:
+                # no version_name, pass
+                pass
 
-        # add firefox keys to manifest
-        chrome_manifest.update(ffx_manifest_extras)
-    except ValueError:
-        exit(1)
+            # add firefox keys to manifest
+            chrome_manifest.update(ffx_manifest_extras)
+        except ValueError:
+            print "Error: could not parse manifest file."
+            exit(1)
+except IOError:
+    print "Error: problem reading manifest file or file not found."
+    exit(1)
 
 if chrome_manifest is None:
+    print "Error: no usable manifest file found."
     exit(1)
 
 try:
     name = chrome_manifest['version_name']
 except KeyError:
     name = "{0}_firefox_{1}".format(chrome_manifest['name'], chrome_manifest['version'])
-archive_filename = '../{0}.xpi'.format(name)
+archive_filename = '{0}.xpi'.format(name)
 
 with zipfile.ZipFile(file=archive_filename, mode='w') as xpi_zip:
+    archive_root = args.dir if args.dir.endswith('/') else args.dir + '/'
+    match_root = re.compile('^{0}'.format(archive_root))
 
     # write all files apart from the manifest
-    for root, dirs, files in os.walk(os.curdir):
+    for root, dirs, files in os.walk(args.dir):
         # exclude hidden files and directories
         files = [f for f in files if not f.startswith('.')]
         dirs[:] = [d for d in dirs if not d.startswith('.')]
 
         for fi in files:
-
-            # add all files to archive except the old manifest and this script
-            if fi != 'manifest.json' or fi != 'pack_ffx.py':
-                xpi_zip.write(os.path.join(root, fi), compress_type=zipfile.ZIP_DEFLATED)
+            # add all files to archive except any old .xpi, the old manifest and this script
+            if fi != 'manifest.json' and fi != 'pack_ffx.py' and not fi.endswith(".xpi"):
+                xpi_zip.write(filename=os.path.join(root, fi),
+                              arcname=match_root.sub('', os.path.join(root, fi)),
+                              compress_type=zipfile.ZIP_DEFLATED)
 
     # write the updated manifest
     xpi_zip.writestr('manifest.json', json.dumps(chrome_manifest), compress_type=zipfile.ZIP_DEFLATED)
