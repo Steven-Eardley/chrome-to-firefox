@@ -3,6 +3,7 @@ import os
 import json
 import zipfile
 import argparse
+import re
 
 abt = \
     """
@@ -68,23 +69,26 @@ except KeyError:
 archive_filename = '{0}.xpi'.format(name)
 
 with zipfile.ZipFile(file=archive_filename, mode='w') as xpi_zip:
+    archive_root = args.dir if args.dir.endswith('/') else args.dir + '/'
+    match_root = re.compile('^{0}'.format(archive_root))
 
     # write all files apart from the manifest
-    for root, dirs, files in os.walk(os.path.join(os.curdir, args.dir)):
+    for root, dirs, files in os.walk(args.dir):
         # exclude hidden files and directories
         files = [f for f in files if not f.startswith('.')]
         dirs[:] = [d for d in dirs if not d.startswith('.')]
 
         for fi in files:
-
             # add all files to archive except any old .xpi, the old manifest and this script
             if fi != 'manifest.json' and fi != 'pack_ffx.py' and not fi.endswith(".xpi"):
-                xpi_zip.write(os.path.join(root, fi), compress_type=zipfile.ZIP_DEFLATED)
+                xpi_zip.write(filename=os.path.join(root, fi),
+                              arcname=match_root.sub('', os.path.join(root, fi)),
+                              compress_type=zipfile.ZIP_DEFLATED)
 
     # write the updated manifest
     xpi_zip.writestr('manifest.json', json.dumps(chrome_manifest), compress_type=zipfile.ZIP_DEFLATED)
 
-    print "Done. New archive at {0}/{1} including:\n".format(args.dir, archive_filename)
+    print "Done. New archive at {0} including:\n".format(archive_filename)
     xpi_zip.printdir()
 
     xpi_zip.close()
