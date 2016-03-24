@@ -4,15 +4,15 @@ import json
 import zipfile
 import argparse
 import re
-
+ver = '0.1.1'
 abt = \
     """
     Script to convert a Chrome / Opera WebExtension to a Firefox-compatible WebExtension archive.
-    Creates a compressed zip archive named from manifest keys <version_name>.xpi  or <name>_firefox_<version>.xpi
-    Steven Eardley | Cottage Labs LLP | steve@cottagelabs.com
+    Creates a compressed zip archive named from manifest keys <version_name>.xpi  or <name>_firefox_<version>.xpi.
+    By Steven Eardley | Cottage Labs LLP | steve@cottagelabs.com
     """
 
-parser = argparse.ArgumentParser(description=abt)
+parser = argparse.ArgumentParser(description=abt, version=ver)
 parser.add_argument("-d",
                     "--dir",
                     default="..",
@@ -22,7 +22,7 @@ parser.add_argument("-i",
                     "--id",
                     default="firefox_extension@cottagelabs.com",
                     help="extension ID to be added to the manifest. Default is firefox_extension@cottagelabs.com")
-parser.add_argument("-v",
+parser.add_argument("-m",
                     "--min_version",
                     default="45.0.0",
                     help="version to put as strict_min_version for Firefox. Defaults to 45.0.0")
