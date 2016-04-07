@@ -4,7 +4,7 @@ import json
 import zipfile
 import argparse
 import re
-ver = '0.1.1'
+ver = '0.1.2'
 abt = \
     """
     Script to convert a Chrome / Opera WebExtension to a Firefox-compatible WebExtension archive.
@@ -24,8 +24,8 @@ parser.add_argument("-i",
                     help="extension ID to be added to the manifest. Default is firefox_extension@cottagelabs.com")
 parser.add_argument("-m",
                     "--min_version",
-                    default="45.0.0",
-                    help="version to put as strict_min_version for Firefox. Defaults to 45.0.0")
+                    default="45.0",
+                    help="version to put as strict_min_version for Firefox. Defaults to 45.0")
 args = parser.parse_args()
 
 ffx_manifest_extras = {
